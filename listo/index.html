@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cine Plus 🎬</title>
+
+<!-- ✅ Google AdSense -->
+<script async
+  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3623005145407316"
+  crossorigin="anonymous"></script>
+
+<style>
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial,Helvetica,sans-serif;
+}
+header{
+  background:#111;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.logo{
+  color:#e50914;
+  font-size:22px;
+  font-weight:bold;
+}
+input{
+  padding:10px;
+  border-radius:6px;
+  border:none;
+  width:70%;
+}
+#movies{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:15px;
+  padding:15px;
+}
+.card{
+  background:#1c1c1c;
+  border-radius:10px;
+  cursor:pointer;
+  overflow:hidden;
+  transition:transform .2s;
+}
+.card:hover{transform:scale(1.05)}
+.card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+}
+.card p{
+  padding:8px;
+  font-size:14px;
+}
+
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.95);
+  z-index:3000;
+  justify-content:center;
+  align-items:center;
+}
+.modal iframe{
+  width:90%;
+  max-width:900px;
+  height:500px;
+  border:none;
+  border-radius:12px;
+}
+.close{
+  position:absolute;
+  top:20px;
+  right:25px;
+  font-size:35px;
+  cursor:pointer;
+}
+
+/* ADS */
+#adStart,#videoAd{
+  position:fixed;
+  inset:0;
+  background:#000;
+  z-index:4000;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+}
+button{
+  padding:10px 20px;
+  border:none;
+  border-radius:8px;
+  background:#e50914;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+  margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🔴 ANUNCIO AL INICIAR -->
+<div id="adStart">
+  <p style="font-size:20px;margin-bottom:15px">Anuncio patrocinado</p>
+
+  <ins class="adsbygoogle"
+    style="display:block"
+    data-ad-client="ca-pub-3623005145407316"
+    data-ad-slot="4103131320"
+    data-ad-format="auto"
+    data-full-width-responsive="true"></ins>
+
+  <button onclick="closeStartAd()">Continuar</button>
+</div>
+
+<header>
+  <div class="logo">🎬 Cine Plus</div>
+  <input id="search" placeholder="Buscar películas..." />
+</header>
+
+<div id="movies"></div>
+
+<!-- 🔴 PRE-ROLL -->
+<div id="videoAd" style="display:none">
+  <p>El video comienza en <span id="count">5</span>s</p>
+
+  <ins class="adsbygoogle"
+    style="display:block;width:300px;height:250px"
+    data-ad-client="ca-pub-3623005145407316"
+    data-ad-slot="4103131320"></ins>
+</div>
+
+<!-- 🎬 MODAL TRAILER -->
+<div class="modal" id="modal">
+  <span class="close" onclick="closeModal()">&times;</span>
+  <iframe id="player" allowfullscreen></iframe>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const OMDB_KEY = "d58f0933";
+const OMDB_URL = "https://www.omdbapi.com/";
+const TMDB_KEY = "TU_TMDB_KEY_AQUI"; //designergpt.replit.app/pages/7bd62b502414060419be8662b751c5dd.html#peliculas; ← pon tu key TMDB
+const TMDB_URL= "https://api.themoviedb.org/3";
+
+let page = 20;
+let query = "movie";
+let loading = false;
+
+/* ================= ADS ================= */
+function closeStartAd(){
+  document.getElementById("adStart").style.display="none";
+  (adsbygoogle = window.adsbygoogle || []).push({});
+}
+
+/* ================= LOAD MOVIES ================= */
+async function loadMovies(){
+  if(loading) return;
+  loading = true;
+
+  const res = await fetch(`${OMDB_URL}?apikey=${OMDB_KEY}&s=${query}&page=${page}`);
+  const data = await res.json();
+
+  if(data.Response === "True"){
+    data.Search.forEach(m=>{
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${m.Poster !== "N/A" ? m.Poster : "https://via.placeholder.com/300x450"}">
+        <p>${m.Title} (${m.Year})</p>
+      `;
+      card.onclick = ()=>openDetail(m.imdbID);
+      movies.appendChild(card);
+    });
+    page++;
+  }
+  loading = false;
+}
+
+/* ================= SCROLL INFINITO ================= */
+window.addEventListener("scroll",()=>{
+  if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 300){
+    loadMovies();
+  }
+});
+
+/* ================= BUSCADOR ================= */
+search.addEventListener("keyup",e=>{
+  if(e.key === "Enter"){
+    movies.innerHTML = "";
+    query = search.value || "movie";
+    page = 1;
+    loadMovies();
+  }
+});
+
+/* ================= PRE-ROLL + TRAILER ================= */
+async function openDetail(imdbID){
+  const ad = document.getElementById("videoAd");
+  const count = document.getElementById("count");
+  let t = 5;
+
+  ad.style.display = "flex";
+  (adsbygoogle = window.adsbygoogle || []).push({});
+
+  const timer = setInterval(()=>{
+    t--;
+    count.textContent = t;
+    if(t === 0){
+      clearInterval(timer);
+      ad.style.display = "none";
+      loadTrailer(imdbID);
+    }
+  },1000);
+}
+
+async function loadTrailer(imdbID){
+  const f = await fetch(`${TMDB_URL}/find/${imdbID}?api_key=${TMDB_KEY}&external_source=imdb_id`);
+  const fd = await f.json();
+  const movie = fd.movie_results[0];
+  if(!movie){ alert("Trailer no disponible"); return; }
+
+  const v = await fetch(`${TMDB_URL}/movie/${movie.id}/videos?api_key=${TMDB_KEY}`);
+  const vd = await v.json();
+  const trailer = vd.results.find(x=>x.site==="YouTube" && x.type==="Trailer");
+  if(!trailer){ alert("No hay trailer"); return; }
+
+  player.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1`;
+  modal.style.display = "flex";
+}
+
+function closeModal(){
+  modal.style.display = "none";
+  player.src = "";
+}
+
+/* ================= INIT ================= */
+loadMovies();
+</script>
+
+</body>
+</html>
